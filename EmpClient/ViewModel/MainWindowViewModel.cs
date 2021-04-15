@@ -156,7 +156,6 @@ namespace EmpClient.ViewModels
             get { return _status; }
             set { SetProperty(ref _status, value); }
         }
-        #endregion
         private bool _isShowForm;
 
         public bool IsShowForm
@@ -172,6 +171,7 @@ namespace EmpClient.ViewModels
             get { return _showPostMessage; }
             set { SetProperty(ref _showPostMessage, value); }
         }
+        #endregion
 
         #region Pagination commands
 
