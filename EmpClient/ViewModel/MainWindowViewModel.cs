@@ -333,30 +333,38 @@ namespace EmpClient.ViewModels
         /// </summary>
         private void GetEmployeeDetails()
         {
-            int pageNumber = 0;
-            if (Start < 2)
-                pageNumber = 1;
-            else
-                pageNumber = (Start / 20) + 1;
-            var employeeDetails = WebAPI.GetEmployeesData(pageNumber);
-            if (employeeDetails.Result.StatusCode == System.Net.HttpStatusCode.OK)
+            try
             {
-                string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
-
-                APISuccessResponseObjectWhenGet responseObj = JsonConvert.DeserializeObject<APISuccessResponseObjectWhenGet>(res);
-                Employees = responseObj.data;
-                IsLoadData = true;
-                if (pageNumber == 1)
+                int pageNumber = 0;
+                if (Start < 2)
+                    pageNumber = 1;
+                else
+                    pageNumber = (Start / 20) + 1;
+                var employeeDetails = WebAPI.GetEmployeesData(pageNumber);
+                if (employeeDetails.Result.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    Start = ((pageNumber - 1) * responseObj.Meta.Pagination.Limit);
-                    End = (pageNumber * responseObj.Meta.Pagination.Limit);
-                    TotalItems = responseObj.Meta.Pagination.Total;
+                    string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
+
+                    APISuccessResponseObjectWhenGet responseObj = JsonConvert.DeserializeObject<APISuccessResponseObjectWhenGet>(res);
+                    Employees = responseObj.data;
+                    IsLoadData = true;
+                    if (pageNumber == 1)
+                    {
+                        Start = ((pageNumber - 1) * responseObj.Meta.Pagination.Limit);
+                        End = (pageNumber * responseObj.Meta.Pagination.Limit);
+                        TotalItems = responseObj.Meta.Pagination.Total;
+                    }
+                    NotifyPropertyChanged("Start");
+                    NotifyPropertyChanged("End");
+                    NotifyPropertyChanged("TotalItems");
                 }
-                NotifyPropertyChanged("Start");
-                NotifyPropertyChanged("End");
-                NotifyPropertyChanged("TotalItems");
+                ClearContents();
             }
-            ClearContents();
+            catch (Exception ex)
+            {
+                ResponseMessage = "Employee data cannot be fetched at the moment!";
+                NotifyPropertyChanged("ResponseMessage");
+            }
         }
 
         /// <summary>
@@ -364,29 +372,37 @@ namespace EmpClient.ViewModels
         /// </summary>
         private void SearchEmployeeDetailsById()
         {
-            if (SearchEmployeeId.HasValue)
+            try
             {
-                List<Employee> empList = new List<Employee>();
-                var employeeDetails = WebAPI.SearchEmployeesData(SearchEmployeeId.Value);
-                if (employeeDetails.Result.StatusCode == System.Net.HttpStatusCode.OK)
+                if (SearchEmployeeId.HasValue)
                 {
-                    string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
-                    Type[] types = new Type[] { typeof(APISuccessResponseObject), typeof(APIErrorResponseObject), typeof(APIErrorResponseObjectMultipleErrorMessages) };
+                    List<Employee> empList = new List<Employee>();
+                    var employeeDetails = WebAPI.SearchEmployeesData(SearchEmployeeId.Value);
+                    if (employeeDetails.Result.StatusCode == System.Net.HttpStatusCode.OK)
+                    {
+                        string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
+                        Type[] types = new Type[] { typeof(APISuccessResponseObject), typeof(APIErrorResponseObject), typeof(APIErrorResponseObjectMultipleErrorMessages) };
 
-                    APISuccessResponseObject responseObj = JsonConvert.DeserializeObject<APISuccessResponseObject>(res);
+                        APISuccessResponseObject responseObj = JsonConvert.DeserializeObject<APISuccessResponseObject>(res);
 
-                    empList.Add(responseObj.data);
-                    Employees = empList;
-                    IsLoadData = true;
-                    ResponseMessage = "Employee found in the records!!";
+                        empList.Add(responseObj.data);
+                        Employees = empList;
+                        IsLoadData = true;
+                        ResponseMessage = "Employee found in the records!!";
+                    }
+                    else
+                    {
+                        ResponseMessage = "SearchById accepts number only!!";
+                    }
                 }
-                else
-                {
-                    ResponseMessage = "SearchById accepts number only!!";
-                }
+                NotifyPropertyChanged("ResponseMessage");
+                ClearContents();
+
             }
-            NotifyPropertyChanged("ResponseMessage");
-            ClearContents();
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
 
@@ -395,20 +411,28 @@ namespace EmpClient.ViewModels
         /// </summary>
         private void CreateNewEmployee()
         {
-            Employee newEmployee = new Employee()
+            try
             {
-                name = name,
-                email = email,
-                gender = gender,
-                status = status
-            };
-            var employeeDetails = WebAPI.CreateEmployeeData(newEmployee);
+                Employee newEmployee = new Employee()
+                {
+                    name = name,
+                    email = email,
+                    gender = gender,
+                    status = status
+                };
+                var employeeDetails = WebAPI.CreateEmployeeData(newEmployee);
 
-            string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
-            Type[] types = new Type[] { typeof(APISuccessResponseObject), typeof(APIErrorResponseObject), typeof(APIErrorResponseObjectMultipleErrorMessages) };
-            ShowPostMessage = DeserializeResponseObjectHelper(res, types, "Create", newEmployee);
-            NotifyPropertyChanged("ShowPostMessage");
-            ClearContents();
+                string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
+                Type[] types = new Type[] { typeof(APISuccessResponseObject), typeof(APIErrorResponseObject), typeof(APIErrorResponseObjectMultipleErrorMessages) };
+                ShowPostMessage = DeserializeResponseObjectHelper(res, types, "Create", newEmployee);
+                NotifyPropertyChanged("ShowPostMessage");
+                ClearContents();
+
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
 
@@ -419,11 +443,19 @@ namespace EmpClient.ViewModels
         /// <param name="employee"></param>
         private void UpdateEmployeeDetails(Employee employee)
         {
-            var employeeDetails = WebAPI.UpdateEmployeeData(employee.id, employee);
-            string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
-            Type[] types = new Type[] { typeof(APISuccessResponseObject), typeof(APIErrorResponseObject), typeof(APIErrorResponseObjectMultipleErrorMessages) };
-            ResponseMessage = DeserializeResponseObjectHelper(res, types, "Update", employee);
-            ClearContents();
+            try
+            {
+                var employeeDetails = WebAPI.UpdateEmployeeData(employee.id, employee);
+                string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
+                Type[] types = new Type[] { typeof(APISuccessResponseObject), typeof(APIErrorResponseObject), typeof(APIErrorResponseObjectMultipleErrorMessages) };
+                ResponseMessage = DeserializeResponseObjectHelper(res, types, "Update", employee);
+                ClearContents();
+
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -432,26 +464,35 @@ namespace EmpClient.ViewModels
         /// <param name="employee"></param>
         private void DeleteEmployeeDetails(Employee employee)
         {
-            if (employee != null)
+            try
             {
-                var employeeDetails = WebAPI.DeleteEmployeeData(employee.id);
-                string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
-                Type[] types = new Type[] { typeof(APISuccessResponseObject), typeof(APIErrorResponseObject), typeof(APIErrorResponseObjectMultipleErrorMessages) };
-                ResponseMessage = DeserializeResponseObjectHelper(res, types, "Delete", employee);
+                if (employee != null)
+                {
+                    var employeeDetails = WebAPI.DeleteEmployeeData(employee.id);
+                    string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
+                    Type[] types = new Type[] { typeof(APISuccessResponseObject), typeof(APIErrorResponseObject), typeof(APIErrorResponseObjectMultipleErrorMessages) };
+                    ResponseMessage = DeserializeResponseObjectHelper(res, types, "Delete", employee);
+                }
+                else if (DeleteEmployeeId.HasValue)
+                {
+                    var employeeDetails = WebAPI.DeleteEmployeeData(DeleteEmployeeId.Value);
+                    string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
+                    Type[] types = new Type[] { typeof(APISuccessResponseObject), typeof(APIErrorResponseObject), typeof(APIErrorResponseObjectMultipleErrorMessages) };
+                    ResponseMessage = DeserializeResponseObjectHelper(res, types, "Delete", employee);
+                }
+                else
+                {
+                    ResponseMessage = "Enter valid input!!";
+                }
+                NotifyPropertyChanged("ResponseMessage");
+                ClearContents();
+
             }
-            else if (DeleteEmployeeId.HasValue)
+            catch (Exception)
             {
-                var employeeDetails = WebAPI.DeleteEmployeeData(DeleteEmployeeId.Value);
-                string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
-                Type[] types = new Type[] { typeof(APISuccessResponseObject), typeof(APIErrorResponseObject), typeof(APIErrorResponseObjectMultipleErrorMessages) };
-                ResponseMessage = DeserializeResponseObjectHelper(res, types, "Delete", employee);
+
+                throw;
             }
-            else
-            {
-                ResponseMessage = "Enter valid input!!";
-            }
-            NotifyPropertyChanged("ResponseMessage");
-            ClearContents();
         }
 
         /// <summary>
@@ -460,33 +501,42 @@ namespace EmpClient.ViewModels
         /// </summary>
         private void ExportToCSV()
         {
-            List<Employee> exportToCSVList = new List<Employee>();
-            var employeeDetails = WebAPI.GetEmployeesData();
-            if (employeeDetails.Result.StatusCode == System.Net.HttpStatusCode.OK)
+            try
             {
-                string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
-
-                APISuccessResponseObjectWhenGet responseObj = JsonConvert.DeserializeObject<APISuccessResponseObjectWhenGet>(res);
-                exportToCSVList = responseObj.data;
-                for (int pageNumber = 2; pageNumber <= responseObj.Meta.Pagination.Pages; pageNumber++)
+                List<Employee> exportToCSVList = new List<Employee>();
+                var employeeDetails = WebAPI.GetEmployeesData();
+                if (employeeDetails.Result.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    var paginatedEmployeeDetails = WebAPI.GetEmployeesData(pageNumber);
-                    if (employeeDetails.Result.StatusCode == System.Net.HttpStatusCode.OK)
+                    string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
+
+                    APISuccessResponseObjectWhenGet responseObj = JsonConvert.DeserializeObject<APISuccessResponseObjectWhenGet>(res);
+                    exportToCSVList = responseObj.data;
+                    for (int pageNumber = 2; pageNumber <= responseObj.Meta.Pagination.Pages; pageNumber++)
                     {
-                        string paginatedResult = paginatedEmployeeDetails.Result.Content.ReadAsStringAsync().Result;
-                        APISuccessResponseObjectWhenGet paginatedResponseObj = JsonConvert.DeserializeObject<APISuccessResponseObjectWhenGet>(paginatedResult);
-                        exportToCSVList.AddRange(paginatedResponseObj.data);
+                        var paginatedEmployeeDetails = WebAPI.GetEmployeesData(pageNumber);
+                        if (employeeDetails.Result.StatusCode == System.Net.HttpStatusCode.OK)
+                        {
+                            string paginatedResult = paginatedEmployeeDetails.Result.Content.ReadAsStringAsync().Result;
+                            APISuccessResponseObjectWhenGet paginatedResponseObj = JsonConvert.DeserializeObject<APISuccessResponseObjectWhenGet>(paginatedResult);
+                            exportToCSVList.AddRange(paginatedResponseObj.data);
+                        }
                     }
+                    DataTable EmployeeTable = GetTable(exportToCSVList);
+                    string workingDirectory = Environment.CurrentDirectory;
+                    string startupPath = Directory.GetParent(workingDirectory).Parent.Parent.FullName;
+                    CSVUtlity.ToCSV(EmployeeTable, startupPath + "\\" + ConfigurationManager.AppSettings["ExportFileName"]);
+                    ResponseMessage = "Downloading completed. . .";
+                    NotifyPropertyChanged("ResponseMessage");
                 }
-                DataTable EmployeeTable = GetTable(exportToCSVList);
-                string workingDirectory = Environment.CurrentDirectory;
-                string startupPath = Directory.GetParent(workingDirectory).Parent.Parent.FullName;
-                CSVUtlity.ToCSV(EmployeeTable, startupPath + "\\" + ConfigurationManager.AppSettings["ExportFileName"]);
-                ResponseMessage = "Downloading completed. . .";
-                NotifyPropertyChanged("ResponseMessage");
+                exportToCSVList = null;
+                ClearContents();
+
             }
-            exportToCSVList = null;
-            ClearContents();
+            catch (Exception)
+            {
+
+                throw;
+            }
         }
         #endregion
 
