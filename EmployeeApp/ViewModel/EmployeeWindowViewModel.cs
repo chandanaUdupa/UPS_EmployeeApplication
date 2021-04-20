@@ -1,7 +1,10 @@
 ﻿using EmpClient.DTOClasses;
 using EmpClient.Service;
 using EmpClient.Utilities;
+using EmployeeApp.BusinessLogic;
+using EmployeeApp.Utilities;
 using Newtonsoft.Json;
+using NLog;
 using Prism.Commands;
 using Prism.Mvvm;
 using System;
@@ -15,8 +18,9 @@ using System.Windows.Input;
 
 namespace EmpClient.ViewModels
 {
-    class MainWindowViewModel : BindableBase, INotifyPropertyChanged
+    class EmployeeWindowViewModel : BindableBase, INotifyPropertyChanged
     {
+        EmployeeBusinessLogic businessLogic = new EmployeeBusinessLogic();
 
         #region INotifyPropertyChanged Members
 
@@ -52,8 +56,12 @@ namespace EmpClient.ViewModels
         public int Start
         {
             get { return _start + 1; }
-            set { SetProperty(ref _start, value); }
+            set
+            {
+                SetProperty(ref _start, value);
+            }
         }
+
 
         /// <summary>
         /// Gets the index of the last item in the employees list.
@@ -62,8 +70,12 @@ namespace EmpClient.ViewModels
         public int End
         {
             get { return _start + _itemCount < _totalItems ? _start + _itemCount : _totalItems; ; }
-            set { SetProperty(ref _end, value); }
+            set
+            {
+                SetProperty(ref _end, value);
+            }
         }
+
 
         /// <summary>
         /// The number of total items in the data store.
@@ -72,7 +84,10 @@ namespace EmpClient.ViewModels
         public int TotalItems
         {
             get { return _totalItems; }
-            set { SetProperty(ref _totalItems, value); }
+            set
+            {
+                SetProperty(ref _totalItems, value);
+            }
         }
 
         private int? _searchEmployeeId;
@@ -118,7 +133,14 @@ namespace EmpClient.ViewModels
         public string ResponseMessage
         {
             get { return _responseMessage; }
-            set { SetProperty(ref _responseMessage, value); }
+            set
+            {
+                if (_responseMessage != value)
+                {
+                    _responseMessage = value;
+                    NotifyPropertyChanged("ResponseMessage");
+                }
+            }
         }
         #endregion
 
@@ -129,7 +151,10 @@ namespace EmpClient.ViewModels
         public string name
         {
             get { return _name; }
-            set { SetProperty(ref _name, value); }
+            set
+            {
+                SetProperty(ref _name, value);
+            }
         }
 
 
@@ -138,7 +163,10 @@ namespace EmpClient.ViewModels
         public string email
         {
             get { return _email; }
-            set { SetProperty(ref _email, value); }
+            set
+            {
+                SetProperty(ref _email, value);
+            }
         }
 
         private string _gender;
@@ -146,7 +174,10 @@ namespace EmpClient.ViewModels
         public string gender
         {
             get { return _gender; }
-            set { SetProperty(ref _gender, value); }
+            set
+            {
+                SetProperty(ref _gender, value);
+            }
         }
 
         private string _status;
@@ -154,7 +185,10 @@ namespace EmpClient.ViewModels
         public string status
         {
             get { return _status; }
-            set { SetProperty(ref _status, value); }
+            set
+            {
+                SetProperty(ref _status, value);
+            }
         }
         private bool _isShowForm;
 
@@ -169,7 +203,14 @@ namespace EmpClient.ViewModels
         public string ShowPostMessage
         {
             get { return _showPostMessage; }
-            set { SetProperty(ref _showPostMessage, value); }
+            set
+            {
+                if (_showPostMessage != value)
+                {
+                    _showPostMessage = value;
+                    NotifyPropertyChanged("ShowPostMessage");
+                }
+            }
         }
         #endregion
 
@@ -305,8 +346,9 @@ namespace EmpClient.ViewModels
         /// <summary>
         /// Initalize perperies & delegate commands
         /// </summary>
-        public MainWindowViewModel()
+        public EmployeeWindowViewModel()
         {
+            LoggerHelper.logger.Info("Employee View Model");
             GetEmployeeDetails();
             OnLoadCallGet = new DelegateCommand(GetEmployeeDetails);
             GetButtonClicked = new DelegateCommand(GetEmployeeDetails);
@@ -340,30 +382,27 @@ namespace EmpClient.ViewModels
                     pageNumber = 1;
                 else
                     pageNumber = (Start / 20) + 1;
-                var employeeDetails = WebAPI.GetEmployeesData(pageNumber);
-                if (employeeDetails.Result.StatusCode == System.Net.HttpStatusCode.OK)
+                //businessLogic.GetEmployeeDetails(pageNumber);
+                Employees = businessLogic.GetEmployeeDetails(pageNumber).Item1;
+                IsLoadData = true;
+                if (pageNumber == 1)
                 {
-                    string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
-
-                    APISuccessResponseObjectWhenGet responseObj = JsonConvert.DeserializeObject<APISuccessResponseObjectWhenGet>(res);
-                    Employees = responseObj.data;
-                    IsLoadData = true;
-                    if (pageNumber == 1)
-                    {
-                        Start = ((pageNumber - 1) * responseObj.Meta.Pagination.Limit);
-                        End = (pageNumber * responseObj.Meta.Pagination.Limit);
-                        TotalItems = responseObj.Meta.Pagination.Total;
-                    }
-                    NotifyPropertyChanged("Start");
-                    NotifyPropertyChanged("End");
-                    NotifyPropertyChanged("TotalItems");
+                    Start = businessLogic.GetEmployeeDetails(pageNumber).Item2;
+                    End = businessLogic.GetEmployeeDetails(pageNumber).Item3;
+                    TotalItems = businessLogic.GetEmployeeDetails(pageNumber).Item4;
                 }
-                ClearContents();
+                NotifyPropertyChanged("Start");
+                NotifyPropertyChanged("End");
+                NotifyPropertyChanged("TotalItems");
             }
             catch (Exception ex)
             {
                 ResponseMessage = "Employee data cannot be fetched at the moment!";
-                NotifyPropertyChanged("ResponseMessage");
+                LoggerHelper.logger.Error("Error in GetEmployeeDetails" + ex.Message);
+            }
+            finally
+            {
+                ClearContents();
             }
         }
 
@@ -372,36 +411,28 @@ namespace EmpClient.ViewModels
         /// </summary>
         private void SearchEmployeeDetailsById()
         {
+            List<Employee> empList = new List<Employee>();
             try
             {
                 if (SearchEmployeeId.HasValue)
                 {
-                    List<Employee> empList = new List<Employee>();
-                    var employeeDetails = WebAPI.SearchEmployeesData(SearchEmployeeId.Value);
-                    if (employeeDetails.Result.StatusCode == System.Net.HttpStatusCode.OK)
-                    {
-                        string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
-                        Type[] types = new Type[] { typeof(APISuccessResponseObject), typeof(APIErrorResponseObject), typeof(APIErrorResponseObjectMultipleErrorMessages) };
-
-                        APISuccessResponseObject responseObj = JsonConvert.DeserializeObject<APISuccessResponseObject>(res);
-
-                        empList.Add(responseObj.data);
-                        Employees = empList;
-                        IsLoadData = true;
-                        ResponseMessage = "Employee found in the records!!";
-                    }
-                    else
-                    {
-                        ResponseMessage = "SearchById accepts number only!!";
-                    }
+                    Employees = businessLogic.SearchEmployeeDetailsById(SearchEmployeeId.Value);
+                    IsLoadData = true;
+                    ResponseMessage = "Employee found in the records!!";
                 }
-                NotifyPropertyChanged("ResponseMessage");
-                ClearContents();
-
+                else
+                {
+                    ResponseMessage = "SearchById accepts number only!!";
+                }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                LoggerHelper.logger.Error("Error in SearchEmployeeDetailsById" + ex.Message);
+            }
+            finally
+            {
+                ShowPostMessage = null;
+                ClearContents();
             }
         }
 
@@ -420,18 +451,16 @@ namespace EmpClient.ViewModels
                     gender = gender,
                     status = status
                 };
-                var employeeDetails = WebAPI.CreateEmployeeData(newEmployee);
-
-                string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
-                Type[] types = new Type[] { typeof(APISuccessResponseObject), typeof(APIErrorResponseObject), typeof(APIErrorResponseObjectMultipleErrorMessages) };
-                ShowPostMessage = DeserializeResponseObjectHelper(res, types, "Create", newEmployee);
-                NotifyPropertyChanged("ShowPostMessage");
-                ClearContents();
-
+                ShowPostMessage = businessLogic.CreateNewEmployee(newEmployee);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                LoggerHelper.logger.Error("Error in CreateNewEmployee" + ex.Message);
+            }
+            finally
+            {
+                ResponseMessage = null;
+                ClearContents();
             }
         }
 
@@ -445,16 +474,15 @@ namespace EmpClient.ViewModels
         {
             try
             {
-                var employeeDetails = WebAPI.UpdateEmployeeData(employee.id, employee);
-                string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
-                Type[] types = new Type[] { typeof(APISuccessResponseObject), typeof(APIErrorResponseObject), typeof(APIErrorResponseObjectMultipleErrorMessages) };
-                ResponseMessage = DeserializeResponseObjectHelper(res, types, "Update", employee);
-                ClearContents();
-
+                ResponseMessage = businessLogic.UpdateEmployeeDetails(employee);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                LoggerHelper.logger.Error("Error in UpdateEmployeeDetails" + ex.Message);
+            }
+            finally
+            {
+                ClearContents();
             }
         }
 
@@ -468,30 +496,26 @@ namespace EmpClient.ViewModels
             {
                 if (employee != null)
                 {
-                    var employeeDetails = WebAPI.DeleteEmployeeData(employee.id);
-                    string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
-                    Type[] types = new Type[] { typeof(APISuccessResponseObject), typeof(APIErrorResponseObject), typeof(APIErrorResponseObjectMultipleErrorMessages) };
-                    ResponseMessage = DeserializeResponseObjectHelper(res, types, "Delete", employee);
+                    ResponseMessage = businessLogic.DeleteEmployeeDetails(employee.id);
                 }
                 else if (DeleteEmployeeId.HasValue)
                 {
-                    var employeeDetails = WebAPI.DeleteEmployeeData(DeleteEmployeeId.Value);
-                    string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
-                    Type[] types = new Type[] { typeof(APISuccessResponseObject), typeof(APIErrorResponseObject), typeof(APIErrorResponseObjectMultipleErrorMessages) };
-                    ResponseMessage = DeserializeResponseObjectHelper(res, types, "Delete", employee);
+                    ResponseMessage = businessLogic.DeleteEmployeeDetails(DeleteEmployeeId.Value);
                 }
                 else
                 {
                     ResponseMessage = "Enter valid input!!";
                 }
-                NotifyPropertyChanged("ResponseMessage");
-                ClearContents();
 
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                LoggerHelper.logger.Error("Error in DeleteEmployeeDetails" + ex.Message);
+            }
+            finally
+            {
+                ShowPostMessage = null;
+                ClearContents();
             }
         }
 
@@ -503,65 +527,20 @@ namespace EmpClient.ViewModels
         {
             try
             {
-                List<Employee> exportToCSVList = new List<Employee>();
-                var employeeDetails = WebAPI.GetEmployeesData();
-                if (employeeDetails.Result.StatusCode == System.Net.HttpStatusCode.OK)
-                {
-                    string res = employeeDetails.Result.Content.ReadAsStringAsync().Result;
-
-                    APISuccessResponseObjectWhenGet responseObj = JsonConvert.DeserializeObject<APISuccessResponseObjectWhenGet>(res);
-                    exportToCSVList = responseObj.data;
-                    for (int pageNumber = 2; pageNumber <= responseObj.Meta.Pagination.Pages; pageNumber++)
-                    {
-                        var paginatedEmployeeDetails = WebAPI.GetEmployeesData(pageNumber);
-                        if (employeeDetails.Result.StatusCode == System.Net.HttpStatusCode.OK)
-                        {
-                            string paginatedResult = paginatedEmployeeDetails.Result.Content.ReadAsStringAsync().Result;
-                            APISuccessResponseObjectWhenGet paginatedResponseObj = JsonConvert.DeserializeObject<APISuccessResponseObjectWhenGet>(paginatedResult);
-                            exportToCSVList.AddRange(paginatedResponseObj.data);
-                        }
-                    }
-                    DataTable EmployeeTable = GetTable(exportToCSVList);
-                    string workingDirectory = Environment.CurrentDirectory;
-                    string startupPath = Directory.GetParent(workingDirectory).Parent.Parent.FullName;
-                    CSVUtlity.ToCSV(EmployeeTable, startupPath + "\\" + ConfigurationManager.AppSettings["ExportFileName"]);
-                    ResponseMessage = "Downloading completed. . .";
-                    NotifyPropertyChanged("ResponseMessage");
-                }
-                exportToCSVList = null;
-                ClearContents();
-
+                businessLogic.ExportToCSV();
+                ResponseMessage = "Downloading completed. . .";
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                ResponseMessage = "Employee details couldn't be exported due to the error" + ex.Message;
+                LoggerHelper.logger.Error("Error in ExportToCSV" + ex.Message);
+            }
+            finally
+            {
+                ClearContents();
             }
         }
         #endregion
-
-        /// <summary>
-        /// Create DataTable to extract employee details to CSV
-        /// </summary>
-        /// <param name="employees"></param>
-        /// <returns></returns>
-        static DataTable GetTable(List<Employee> employees)
-        {
-            DataTable table = new DataTable();
-            Type type = typeof(Employee);
-            PropertyInfo[] properties = type.GetProperties();
-            foreach (PropertyInfo property in properties)
-            {
-                table.Columns.Add(property.Name, property.PropertyType);
-            }
-
-            foreach (Employee emp in employees)
-            {
-                table.Rows.Add(properties[0].GetValue(emp, null), properties[1].GetValue(emp, null), properties[2].GetValue(emp, null), properties[3].GetValue(emp, null), properties[4].GetValue(emp, null), properties[5].GetValue(emp, null), properties[6].GetValue(emp, null));
-            }
-
-            return table;
-        }
 
         /// <summary>
         /// Notifies subscribers of changed properties.
@@ -579,68 +558,17 @@ namespace EmpClient.ViewModels
         {
             SearchEmployeeId = null;
             DeleteEmployeeId = null;
+            name = null;
+            email = null;
+            gender = null;
+            status = null;
+            NotifyPropertyChanged("SearchEmployeeId");
+            NotifyPropertyChanged("DeleteEmployeeId");
+            NotifyPropertyChanged("name");
+            NotifyPropertyChanged("email");
+            NotifyPropertyChanged("gender");
+            NotifyPropertyChanged("status");
         }
 
-        public static string DeserializeResponseObjectHelper(string res, Type[] types, string operation, Employee employee)
-        {
-            object obj = null;
-            string resMessage = String.Empty;
-
-            if (JsonDeserializer.TryDeserialize(res, out obj, types))
-            {
-                if (obj is APISuccessResponseObject)
-                {
-                    var responseObj = obj as APISuccessResponseObject;
-                    switch (operation)
-                    {
-                        case "Create":
-                            if (responseObj.Code == (int)System.Net.HttpStatusCode.Created)
-                            {
-                                resMessage = employee.name + ConfigurationManager.AppSettings["CreateEmployeeSuccessMessage"] + responseObj.data.id;
-                            }
-                            else
-                            {
-                                resMessage = employee.name + ConfigurationManager.AppSettings["CreateEmployeeFailureMessage"];
-                            }
-                            break;
-                        case "Update":
-                            if (responseObj.Code == (int)System.Net.HttpStatusCode.OK)
-                            {
-                                resMessage = employee.name + ConfigurationManager.AppSettings["UpdateEmployeeSuccessMessage"] + responseObj.data;
-                            }
-                            else
-                            {
-                                resMessage = employee.name + ConfigurationManager.AppSettings["UpdateEmployeeFailureMessage"];
-                            }
-                            break;
-                        case "Delete":
-                            if (responseObj.Code == (int)System.Net.HttpStatusCode.NoContent)
-                            {
-                                resMessage = ConfigurationManager.AppSettings["DeleteEmployeeSuccessMessage"];
-                            }
-                            else
-                            {
-                                resMessage = ConfigurationManager.AppSettings["CreateEmployeeFailureMessage"];
-                            }
-                            break;
-                    }
-                }
-                else if (obj is APIErrorResponseObjectMultipleErrorMessages)
-                {
-                    var responseObj = obj as APIErrorResponseObjectMultipleErrorMessages;
-                    resMessage = string.Empty;
-                    foreach (var failureMessage in responseObj.data)
-                    {
-                        resMessage += failureMessage.field + " " + failureMessage.message;
-                    }
-                }
-                else
-                {
-                    var responseObj = obj as APIErrorResponseObject;
-                    resMessage = responseObj.data.field + " " + responseObj.data.message;
-                }
-            }
-            return resMessage;
-        }
     }
 }

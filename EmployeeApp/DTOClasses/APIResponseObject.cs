@@ -71,7 +71,7 @@ namespace EmpClient.DTOClasses
         public List<APIMessage> data
         {
             get; set;
-            #endregion
         }
+        #endregion
     }
 }

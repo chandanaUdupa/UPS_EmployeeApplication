@@ -7,7 +7,7 @@
         xmlns:ViewModel="clr-namespace:EmpClient.ViewModels"
         Title="MainWindow" Height="600" Width="650">
     <Window.Resources>
-        <ViewModel:MainWindowViewModel x:Key="VM" />
+        <ViewModel:EmployeeWindowViewModel x:Key="VM" />
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </Window.Resources>
 
@@ -138,7 +138,7 @@
                         Width="120"
                         Grid.Row="1"
                         Grid.Column="1"
-                        Content="Search Employee ById"/>
+                        Content="Search Emp By Id"/>
                 <TextBox x:Name="TextBoxSearch"      
                  Text="{Binding SearchEmployeeId}" 
                  Margin="10 0 0 0"                  
@@ -168,7 +168,8 @@
         
         <Grid x:Name="GridCreateNewEmployee"
               Visibility="{Binding IsLoadData, Converter={StaticResource BooleanToVisibilityConverter}}"
-              Grid.Row="4">
+              Grid.Row="4"
+              Margin="10 0 0 0" >
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>

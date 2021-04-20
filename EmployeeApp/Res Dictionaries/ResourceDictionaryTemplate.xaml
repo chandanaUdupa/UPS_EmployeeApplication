@@ -1,7 +1,7 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:local="clr-namespace:EmpClient">
-    <Thickness x:Key="MarrginTop">0 30 0 0</Thickness>
+    <Thickness x:Key="MarginTop">0 30 0 0</Thickness>
     <Style x:Key="SubmitButtonStyle"
            BasedOn="{StaticResource {x:Type Button}}"
            TargetType="Button">
@@ -13,6 +13,6 @@
             <Setter Property="BorderBrush" Value="Black"/>
             <Setter Property="BorderThickness" Value="2"/>
             <Setter Property="BorderThickness" Value="2"/>
-            <Setter Property="Margin" Value="{StaticResource MarrginTop}"/>
+            <Setter Property="Margin" Value="{StaticResource MarginTop}"/>
     </Style>
 </ResourceDictionary>
